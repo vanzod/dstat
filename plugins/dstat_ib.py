@@ -60,10 +60,15 @@ class dstat_plugin(dstat):
             l=name.split(':');
             if len(l) < 2:
                  continue
-            rcv_counter_name=os.path.join('/sys/class/infiniband', l[0], 'ports', l[1], 'counters_ext/port_rcv_data_64')
-            xmit_counter_name=os.path.join('/sys/class/infiniband', l[0], 'ports', l[1], 'counters_ext/port_xmit_data_64')
-            rcv_lines = dopen(rcv_counter_name).readlines()
-            xmit_lines = dopen(xmit_counter_name).readlines()
+            dir_root=os.path.join('/sys/class/infiniband', l[0], 'ports', l[1]);
+            rcv_counter=glob.glob(os.path.join(dir_root, 'counter*', 'port_rcv_data*'));
+            xmit_counter=glob.glob(os.path.join(dir_root, 'counter*', 'port_xmit_data*'));
+            if not rcv_counter or not xmit_counter:
+                raise Exception('No suitable interface counter files found');
+            if len(rcv_counter) + len(xmit_counter) != 2:
+                raise Exception('No unique interface counter files found');
+            rcv_lines = dopen(rcv_counter[0]).readlines()
+            xmit_lines = dopen(xmit_counter[0]).readlines()
             if len(rcv_lines) < 1 or len(xmit_lines) < 1:
                 continue
             rcv_value = int(rcv_lines[0])
@@ -75,7 +80,7 @@ class dstat_plugin(dstat):
             for name in self.set2:
                 self.val[name] = [
                     (self.set2[name][0] - self.set1[name][0]) * 4.0 / elapsed,
-                    (self.set2[name][1] - self.set1[name][1]) * 4.0/ elapsed,
+                    (self.set2[name][1] - self.set1[name][1]) * 4.0 / elapsed,
                 ]
                 if self.val[name][0] < 0: self.val[name][0] += maxint + 1
                 if self.val[name][1] < 0: self.val[name][1] += maxint + 1
